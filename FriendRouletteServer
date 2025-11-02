@@ -1,0 +1,80 @@
+local dataStoreService = game:GetService("DataStoreService")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local remote = replicatedStorage:FindFirstChild("DataStoreAccess")
+
+local productFunctions = {}
+
+local sessionData = 0
+
+local database = dataStoreService:GetDataStore("SuperStorage")
+
+remote.OnServerInvoke = function(player, ownsGamepass)
+	print('invoked')
+
+	local success, data = pcall(function()
+		return database:GetAsync(player.UserId)
+	end)
+	
+	if success then
+		print('success')
+		if data and not ownsGamepass then
+			
+			pcall(function()
+				database:SetAsync(player.UserId, sessionData)
+			end)
+			sessionData = data
+		elseif ownsGamepass then
+			print("owns gamepass")
+			pcall(function()
+				database:SetAsync(player.UserId, 0)
+			end)
+		else
+			pcall(function()
+				database:IncrementAsync(player.UserId, 1)
+			end)
+		end
+
+		return sessionData
+	else
+		print(data)
+		player:Kick("oh no... your datastore no worky :(")
+		return nil
+	end
+end
+
+productFunctions[3341902701] = function(receipt, player)
+	local success, data = pcall(function()
+		return database:GetAsync(receipt.PlayerId)
+	end)
+	
+	if success then
+		if data then
+			database:IncrementAsync(receipt.PlayerId, -75)
+		else
+			sessionData -= 75
+		end
+		raw
+	else
+		player:Kick("small problem, erm we couldn't uhh make the thing work...")
+	end
+end
+
+local function processReceipt(receiptInfo)
+	local userId = receiptInfo.PlayerId
+	local productId = receiptInfo.ProductId
+
+	local player = game.Players:GetPlayerByUserId(userId)
+	if player then
+		local handler = productFunctions[productId]
+		local success, result = pcall(handler, receiptInfo, player)
+		if success then
+			return Enum.ProductPurchaseDecision.PurchaseGranted
+		else
+			warn("Failed to process receipt:", receiptInfo, result)
+		end
+	end
+
+	return Enum.ProductPurchaseDecision.NotProcessedYet
+end
+
+game.MarketplaceService.ProcessReceipt = processReceipt
