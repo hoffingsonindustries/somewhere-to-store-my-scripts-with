@@ -1,0 +1,54 @@
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local marketplaceService = game:GetService("MarketplaceService")
+local teleportService = game:GetService("TeleportService")
+local remote = replicatedStorage:WaitForChild("DataStoreAccess")
+local player = game.Players.LocalPlayer
+local parent = script.Parent
+local imageLabel = parent.Frame.ImageLabel
+local textLabel = parent.Frame.TextLabel
+local usesLabel = parent.Frame.UsesLabel
+local button = parent.Frame.TextButton
+local friendsOnline = player:GetFriendsOnline()
+local chance = math.random(1, #friendsOnline)
+local jobId = nil
+local placeId = nil
+
+
+for i, friend in friendsOnline do
+	if chance == i then
+		local character = player.Character or player.CharacterAdded:Wait()
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		jobId = friend.GameId
+		placeId = friend.PlaceId
+		local uses = remote:InvokeServer(marketplaceService:UserOwnsGamePassAsync(player.UserId, 1331871497))
+		local usesLeft = 75 - uses
+		print(usesLeft)
+		print(uses)
+		
+		if friend.LastLocation ~= "Studio" and friend.LastLocation ~= "Website" and usesLeft > 0 then
+			local userId = friend.VisitorId
+			local size = Enum.ThumbnailSize.Size420x420
+			local typer = Enum.ThumbnailType.HeadShot
+
+			local pfp = game.Players:GetUserThumbnailAsync(userId, typer, size)
+			
+			usesLabel.Text = "After 75 uses, this system WILL cost 25 robux. The amount of uses you have left is currently " .. tostring(usesLeft)
+		
+			imageLabel.Image = pfp
+			textLabel.Text = 'It appears that your friend, "' .. friend.DisplayName .. '", is playing "' .. friend.LastLocation .. '"! You may wanna join them. Reset character if you want to play with somebody else!'
+		elseif usesLeft <= 0 then
+			player:Kick("OUT OF USES! BUY THE GAMEPASS IF YOU WISH TO HAVE UNLIMITED USES")
+		else
+			humanoid.Health = 0
+		end	
+	end	
+end
+
+
+button.Activated:Connect(function()
+	if jobId ~= nil and placeId ~= nil then
+		teleportService:TeleportToPlaceInstance(placeId, jobId)
+	else
+		player:Kick("couldn't teleport, try joining them yourself!")
+	end
+end)
