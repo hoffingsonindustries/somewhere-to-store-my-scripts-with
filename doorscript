@@ -1,0 +1,97 @@
+local collectionService = game:GetService("CollectionService")
+local tweenService = game:GetService("TweenService")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local textFunction = replicatedStorage:FindFirstChild("TextFunction")
+local attempts = 0
+
+for i, model in collectionService:GetTagged("OtherDoor") do
+	local part = model:FindFirstChild("Sleeper")
+	local originalCFrame = part.CFrame
+	local openCFrame = originalCFrame
+	local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.In, 0, false, 0)
+	local toBeTweened = {CFrame = openCFrame}
+	local tween = tweenService:Create(part, tweenInfo, toBeTweened)
+	local keycardReader = model:FindFirstChild("Keycard Reader")
+	local readerPart = keycardReader:FindFirstChild("ReaderPart")
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.HoldDuration = 0.2
+	local doorIsOpen = false
+	local toBeTweenedAgain = {CFrame = originalCFrame}
+	local tween2 = tweenService:Create(part, tweenInfo, toBeTweenedAgain)
+	prompt.Parent = readerPart
+	local sound = model:FindFirstChild("DoorSound")
+	local sound2 = model:FindFirstChild("accessdEnIEd")	
+	local canBeHacked = model:FindFirstChild("CanBeHacked")
+	
+	prompt.Triggered:Connect(function(plr)
+		local character = plr.Character
+		local tool = character:FindFirstChildOfClass("Tool")
+		
+		if tool then
+			local clearance = tool:FindFirstChildOfClass("IntValue")
+			textFunction:FireClient(plr, "Yippee! The door opened.")
+			if clearance then
+				if clearance.Value >= 3 then
+					if not doorIsOpen then
+						doorIsOpen = true
+						prompt.Enabled = false
+						tween:Play()
+						sound:Play()
+					else
+						doorIsOpen = false
+						prompt.Enabled = false
+						tween2:Play()
+						sound:Play()
+					end
+				else
+					textFunction:FireClient(plr, "Don't I have the correct keycard?")
+					prompt.Enabled = false
+					sound2:Play()
+					task.wait(sound2.TimeLength)
+					prompt.Enabled = true
+				end
+			elseif not clearance and canBeHacked then
+				print("It has come for the hacking time.")
+				if attempts == 3 then
+					tool:Destroy()
+					attempts = 0
+					textFunction:FireClient("Gah! My hacking tool has worn out... ")
+				else
+					if math.random(1,4) == 4 then
+						textFunction:FireClient(plr, "Surprisingly enough, the systems here are rather vulnerable, or I'm just the master hacker.", 0.025)
+						if not doorIsOpen then
+							doorIsOpen = true
+							prompt.Enabled = false
+							tween:Play()
+							sound:Play()
+						else
+							doorIsOpen = false
+							prompt.Enabled = false
+							tween2:Play()
+							sound:Play()
+						end
+					else
+						attempts += 1
+						textFunction:FireClient(plr, "Aw shucks, looks like the security is pretty powerful...")
+						prompt.Enabled = false
+						sound2:Play()
+						task.wait(sound2.TimeLength)
+						prompt.Enabled = true
+					end
+				end
+			else
+				tool:Destroy()
+				textFunction:FireClient(plr, "They FRIED my hacking device? Crap...")
+			end	
+		end
+	end)
+
+	tween2.Completed:Connect(function()
+		prompt.Enabled = true
+	end)
+
+	tween.Completed:Connect(function()
+		prompt.Enabled = true
+	end)
+end
